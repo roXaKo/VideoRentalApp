@@ -14,11 +14,7 @@ async function querryCust(sendNam, select) {
     if (custId === null) return ""
     return custId
 }
-async function querryMovie(sendTit, select) {
-    const movId = await Movie.findById(sendTit).select(select)
-    if (movId === null) return ""
-    return movId
-}
+
 // all
 router.get('/', async (req, res) => {
     res.send(await Rents.find().populate('customer', 'name').populate('title', 'title').sort({ customer: 1 }))
@@ -31,18 +27,20 @@ router.get('/:_id', async (req, res) => {
 router.post('/new', auth, async (req, res) => {
     if (!Mongoose.isValidObjectId(req.body.customer) || !Mongoose.isValidObjectId(req.body.movie)) return res.status(400).send('send data not valid')
 
-    let cust = await querryCust(req.body.customer, { _id: 1, name: 1, phone: 1 })
-    let movi = await querryMovie(req.body.movie,{ _id: 1, title: 1, dailyRentalRate: 1, numberInStock: 1 })
+    let cust = await Customers.querry(req.body.customer, { _id: 1, name: 1, phone: 1 })
     if (!cust) return res.status(404).send('customer not found')
+    let movi = await Movie.querry(req.body.movie, { _id: 1, title: 1, dailyRentalRate: 1, numberInStock: 1 })
     if (!movi) return res.status(404).send('movie not found')
     if (movi.numberInStock == 0) return res.status(400).send('not enugth movies in stock')
+
+    movi.numberInStock -= 1
+    await Movie.findByIdAndUpdate(movi._id, movi)
+
     const rent = new Rents({
         customer: cust,
         title: movi
     })
-    const movNu = await Movie.findById(req.body.movie).select({ _id: 1, numberInStock: 1 })
-    movNu.numberInStock -= 1
-    await Movie.findByIdAndUpdate(movNu._id, movNu)
+
     await rent.save()
     res.send(rent)
 
@@ -67,22 +65,24 @@ router.put('/:customer/:movie', auth, async (req, res) => {
 
     let result = await Rents.findOne({ "customer._id": req.params.customer, "title._id": req.params.movie })
     if (!result) return res.status(404).send("rental not found")
+
     if (req.body.customer) {
         if (!Mongoose.isValidObjectId(req.body.customer)) return res.status(400).send('send data not valid')
-        result.customer = await querryCust(req.body.customer, { _id: 1, name: 1, phone: 1 })
+        result.customer = await Customers.querry(req.body.customer, { _id: 1, name: 1, phone: 1 })
     }
+    
     if (req.body.title) {
         if (!Mongoose.isValidObjectId(req.body.title)) return res.status(400).send('send data not valid')
 
-        result.title = await querryMovie(req.body.title,{ _id: 1, title: 1, dailyRentalRate: 1, numberInStock: 1 })
-        let movNuIn = await Movie.findById(req.params.movie).select({ _id: 1, numberInStock: 1 })
+        let movNuIn = await Movie.querry(req.params.movie,{ _id: 1, numberInStock: 1 })
         movNuIn.numberInStock += 1
-        await Movie.findByIdAndUpdate(movNuIn._id, movNuIn)
 
-        let movNuOut = await Movie.findById(req.body.title).select({ _id: 1, numberInStock: 1 })
-        if (movNuOut.numberInStock === 0) return res.status(400).send('the movie is not in stock')
-        movNuOut.numberInStock -= 1
-        await Movie.findByIdAndUpdate(movNuOut._id, movNuOut)
+        result.title = await Movie.querry(req.body.title, { _id: 1, title: 1, dailyRentalRate: 1, numberInStock: 1 })
+        if (result.title.numberInStock === 0) return res.status(400).send('the movie is not in stock')
+        result.title.numberInStock -= 1
+
+        await Movie.findByIdAndUpdate(movNuIn._id, movNuIn)
+        await Movie.findByIdAndUpdate(result.title._id, result.title)
     }
     await Rents.findByIdAndUpdate(result._id, result)
 

@@ -47,9 +47,8 @@ rentalSchema.methods.return = function () {
     this.dateReturned = new Date
 
     this.rentalFee = moment().diff(this.dateOut, "days") * this.title.dailyRentalRate
-
 }
-const Rents = Mongoose.model('Rents', rentalSchema)
 
+const Rents = Mongoose.model('Rents', rentalSchema)
 
 exports.Rents = Rents

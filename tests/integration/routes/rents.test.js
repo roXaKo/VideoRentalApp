@@ -146,7 +146,7 @@ describe('api/rents', () => {
             await execPost()
 
             db = await Rents.lookup(_idCus1, _idMovie2)
-
+            movie2.numberInStock-=1
             expect(db.customer).toMatchObject(cus1)
             expect(movie2).toMatchObject(db.title)
         })
@@ -226,7 +226,9 @@ describe('api/rents', () => {
             _idMovie2 = _idMovie3
             res = await execPut()
 
+            db = await Movie.querry(_idMovie1, { numberInStock: 1 })
             expect(res.status).toBe(400)
+            expect(db.numberInStock).toBe(1)
         })
         it('should return 200 if rent is updated; return new rent', async () => {
             res = await execPut()
@@ -238,7 +240,6 @@ describe('api/rents', () => {
         })
         it('should increase old movie in stock', async () => {
             res = await execPut()
-
             db = await Movie.findById(_idMovie1).select('+numberInStock')
             expect(db.numberInStock).toBe(movie1.numberInStock + 1)
         })

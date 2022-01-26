@@ -15,7 +15,12 @@ const movieSchema = new mongoose.Schema({
 
 })
 
+movieSchema.statics.querry = async function querry(sendTit, select){
+    const movId = await Movie.findById(sendTit).select(select)
+    if (movId === null) return ""
+    return movId
+}
+
 const Movie = mongoose.model('Movie', movieSchema)
 
 exports.Movie = Movie
-module.exports.movieSchema = movieSchema
