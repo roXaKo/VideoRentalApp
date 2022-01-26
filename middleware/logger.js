@@ -1,7 +1,5 @@
 const { error } = require('winston')
 const winston = require('winston')
-require('winston-mongodb')
-
 
 const logger = winston.createLogger({
     format: winston.format.json(),
