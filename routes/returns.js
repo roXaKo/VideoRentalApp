@@ -12,7 +12,7 @@ router.post('/', auth, async (req, res) => {
     if (!movieId) return res.status(400).send('no vailid movieId provided')
     if (!customerId) return res.status(400).send('no vail id customerId  provided')
 
-    let rent = await Rents.lookup(customerId, movieId)
+    let rent = await Rents.lookup(customerId, movieId,{  title: 1, dateOut: 1, dateReturned: 1 })
     if (!rent) return res.status(404).send('no rent found')
     if (rent.dateReturned) return res.status(400).send('rental already processed')
     

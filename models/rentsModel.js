@@ -35,12 +35,12 @@ const rentalSchema = new Mongoose.Schema({
     rentalFee: Number
 })
 
-rentalSchema.statics.lookup = function lookup(customerId, movieId) {
+rentalSchema.statics.lookup = function lookup(customerId, movieId, select) {
     return this.findOne({
         "customer._id": customerId,
         "title._id": movieId
     })
-        .select({ customer: 1, title: 1, dateOut: 1, dateReturned: 1 })
+        .select(select)
 }
 
 rentalSchema.methods.return = function () {
