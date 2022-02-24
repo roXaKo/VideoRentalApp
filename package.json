@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "engines": {
-    "node": "16.x"
+    "node": "16.13.1",
+    "npm": "8.3.2"
   },
   "main": "index.js",
   "dependencies": {
