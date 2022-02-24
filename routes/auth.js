@@ -12,7 +12,7 @@ router.post('/', async (req, res) => {
     if (login!==true) return res.status(400).send('Email or Password wrong')
 
     const token = comp.generateAuthToken()
-    let back = {name: comp.name}
+    let back = {name: comp.name, token: token}
     
     res.header('x-auth-token',token).send(back)
 })

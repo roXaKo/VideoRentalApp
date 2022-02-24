@@ -14,12 +14,12 @@ router.get('/', async (req, res) => {
 })
 
 router.get('/:name', async (req, res) => {
-    const result = await Genre
+    const data = await Genre
         .findOne({ name: req.params.name })
         .select({ _id: 1, name: 1 })
 
-    if (!result) res.status(404).send('this course was not found')
-    res.send(result)
+    if (!data) res.status(404).send('this course was not found')
+    res.send(data)
 
 })
 

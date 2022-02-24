@@ -2,6 +2,7 @@ const request = require('supertest')
 const { Movie } = require('../../../models/movieModel')
 const { Genre } = require('../../../models/genresModel')
 const { User } = require('../../../models/userModel')
+const  Mongoose  = require('mongoose')
 
 
 describe('/api/movies', () => {
@@ -18,19 +19,20 @@ describe('/api/movies', () => {
         server = require('../../../index')
 
         token = new User().generateAuthToken()
-        testgenre1 = "testgenre1"
-        testgenre2 = "testgenre2"
+        testgenre1id = Mongoose.Types.ObjectId()
+        testgenre2id = Mongoose.Types.ObjectId()
         testmovie1 = "testmovie1"
+        testmovie1id = Mongoose.Types.ObjectId()
         newtitle = "testmovie3"
         newstock = 3
         newrent = 3
         await Genre.insertMany([
-            { name: testgenre1 },
-            { name: testgenre2 }
+            { _id: testgenre1id, name: "testgenre1" },
+            { _id: testgenre2id, name: "testgenre2" }
         ])
         await Movie.insertMany([
-            { title: testmovie1, genre: { name: testgenre1 }, numberInStock: 1, dailyRentalRate: 1 },
-            { title: 'testmovie2', genre: { name: testgenre2 }, numberInStock: 2, dailyRentalRate: 2 }
+            { _id: testmovie1id, title: testmovie1, genre: { _id:  testgenre1id,name: "testgenre1" }, numberInStock: 1, dailyRentalRate: 1 },
+            { title: 'testmovie2', genre: {_id: testgenre2id, name: "testgenre2" }, numberInStock: 2, dailyRentalRate: 2 }
         ])
     })
 
@@ -44,22 +46,22 @@ describe('/api/movies', () => {
             .set('x-auth-token', token)
             .send({
                 title: newtitle,
-                genre: testgenre1,
+                genre: testgenre1id,
                 numberInStock: newstock,
                 dailyRentalRate: newrent
             })
     }
     execDel = () => {
         return request(server)
-            .delete(`/api/movies/${testmovie1}`)
+            .delete(`/api/movies/${testmovie1id}`)
             .set('x-auth-token', token)
     }
     execPut = () => {
-        return request(server).put(`/api/movies/${testmovie1}`)
+        return request(server).put(`/api/movies/${testmovie1id}`)
             .set('x-auth-token', token)
             .send({
                 title: newtitle,
-                genre: testgenre1,
+                genre: testgenre2id,
                 numberInStock: newstock,
                 dailyRentalRate: newrent
             })
@@ -71,8 +73,14 @@ describe('/api/movies', () => {
             expect(res.status).toBe(200)
             expect(res.body.length).toBe(2)
         })
+        it('it should return 404 if user not found', async () => {
+            _id1 = Mongoose.Types.ObjectId
+            res = await request(server).get(`/api/movies/${Mongoose.Types.ObjectId()}`)
+
+            expect(res.status).toBe(404)
+        })
         it('/:name should return one movie', async () => {
-            res = await request(server).get(`/api/movies/${testmovie1}`)
+            res = await request(server).get(`/api/movies/${testmovie1id}`)
 
             expect(res.status).toBe(200)
             expect(res.body.title).toMatch(testmovie1)
@@ -98,7 +106,7 @@ describe('/api/movies', () => {
             expect(res.status).toBe(400)
         })
         it('schould return return 400 if genre doesnt fit schema', async () => {
-            testgenre1 = ""
+            testgenre1id = ""
             res = await execPost()
             expect(res.status).toBe(400)
         })
@@ -113,7 +121,7 @@ describe('/api/movies', () => {
             expect(res.status).toBe(400)
         })
         it('schould return return 400 if genre doesnt exist', async () => {
-            testgenre1 = "notExisting"
+            testgenre1id = Mongoose.Types.ObjectId()
             res = await execPost()
 
             expect(res.status).toBe(400)
@@ -137,7 +145,7 @@ describe('/api/movies', () => {
             expect(db).toHaveProperty("dailyRentalRate")
         })
     })
-    describe('DELETE /:title', () => {
+    describe('DELETE /:_id', () => {
         it('schould return return 401 if user is not logged in', async () => {
             token = ""
             res = await execDel()
@@ -145,7 +153,7 @@ describe('/api/movies', () => {
             expect(res.status).toBe(401)
         })
         it('should return 404 if no movie found', async () => {
-            testmovie1 = "notExisting"
+            testmovie1id = Mongoose.Types.ObjectId()
             res = await execDel()
 
             expect(res.status).toBe(404)
@@ -158,12 +166,12 @@ describe('/api/movies', () => {
         })
         it('should delete movie from db', async () => {
             res = await execDel()
-            let db = await Movie.findOne({ title: testmovie1 })
+            let db = await Movie.findById(testmovie1id)
 
             expect(db === null).toBeTruthy()
         })
     })
-    describe('PUT /:title', () => {
+    describe('PUT /:_id', () => {
         it('schould return return 401 if user is not logged in', async () => {
             token = ""
             res = await execPut()
@@ -177,13 +185,13 @@ describe('/api/movies', () => {
             expect(res.status).toBe(400)
         })
         it('should return 404 if movie is not in db', async () => {
-            testmovie1 = "notExisting"
+            testmovie1id = Mongoose.Types.ObjectId()
             res = await execPut()
 
             expect(res.status).toBe(404)
         })
         it('should return 404 if genre does not exist', async () => {
-            testgenre1 = "notExisting"
+            testgenre2id = Mongoose.Types.ObjectId()
             res = await execPut()
 
             expect(res.status).toBe(400)

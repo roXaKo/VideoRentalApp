@@ -1,5 +1,6 @@
 const Mongoose = require('mongoose')
 const request = require('supertest')
+const { data } = require('../../../middleware/logger')
 const { Customers } = require('../../../models/customerModel')
 const { Movie, movieSchema } = require('../../../models/movieModel')
 const { Rents } = require('../../../models/rentsModel')
@@ -49,7 +50,8 @@ describe('api/rents', () => {
 
         rent1 = { _id: _idRent1, customer: cus1, title: movie1, dateOut: new Date }
         rent2 = { _id: _idRent2, customer: cus2, title: movie2, dateOut: new Date }
-        await Rents.insertMany([rent1, rent2])
+        rent3 = { customer: cus1, title: movie2, dateOut: new Date }
+        await Rents.insertMany([rent1, rent2, rent3])
     })
 
     afterEach(async () => {
@@ -63,29 +65,44 @@ describe('api/rents', () => {
 
     const execPost = () => {
         return request(server)
-            .post('/api/rents/new')
+            .post('/api/rental/new')
             .set('x-auth-token', token)
-            .send({ customer: _idCus1, movie: _idMovie2 })
+            .send({ customer: cus1, title: movie2 })
     }
     const execDel = () => {
         return request(server)
-            .delete(`/api/rents/${_idCus1}/${_idMovie1}`)
+            .delete(`/api/rental/${_idRent1}`)
             .set('x-auth-token', token)
     }
     const execPut = () => {
         return request(server)
-            .put(`/api/rents/${_idCus1}/${_idMovie1}`)
+            .put(`/api/rental/${_idRent1}`)
             .set('x-auth-token', token)
-            .send({ customer: _idCus2, title: _idMovie2 })
+            .send({ customer: cus2, title: movie2 })
     }
     describe('GET', () => {
-        it('should return all rents', async () => {
-            res = await request(server).get("/api/rents")
+        it('should return all rental', async () => {
+            res = await request(server).get("/api/rental")
 
+            expect(res.body.length).toBe(3)
+        })
+        it('it should return 404 if customer not found', async () => {
+            res = await request(server).get(`/api/rental/customer/${Mongoose.Types.ObjectId()}`)
+            expect(res.status).toBe(404)
+        })
+        it('it should return 200 and an array of rentals', async () => {
+            res = await request(server).get(`/api/rental/customer/${_idCus1}`)
+            
+            expect(res.status).toBe(200)
             expect(res.body.length).toBe(2)
         })
-        it('should return one rents of one customer /:name', async () => {
-            res = await request(server).get(`/api/rents/${_idRent1}`)
+        it('it should return 404 if rental not found', async () => {
+            res = await request(server).get(`/api/rental/${Mongoose.Types.ObjectId()}`)
+
+            expect(res.status).toBe(404)
+        })
+        it('should return 200 if rental is found /:id', async () => {
+            res = await request(server).get(`/api/rental/${_idRent1}`)
 
             expect(res.body._id.toString()).toMatch(_idRent1.toString())
             expect(res.body).toHaveProperty("customer")
@@ -100,31 +117,31 @@ describe('api/rents', () => {
             expect(res.status).toBe(401)
         })
         it('should return 400 customer is not valid objId', async () => {
-            _idCus1 = "asd"
+            cus1._id = "asd"
             res = await execPost()
 
             expect(res.status).toBe(400)
         })
         it('should return 400 movie is not valid objId', async () => {
-            _idMovie2 = "asd"
+            movie2._id = "asd"
             res = await execPost()
 
             expect(res.status).toBe(400)
         })
         it('should return 404 customer is not found in db', async () => {
-            _idCus1 = Mongoose.Types.ObjectId()
+            cus1._id = Mongoose.Types.ObjectId()
             res = await execPost()
 
             expect(res.status).toBe(404)
         })
         it('should return 404 movie is not found in db', async () => {
-            _idMovie2 = Mongoose.Types.ObjectId()
+            movie2._id = Mongoose.Types.ObjectId()
             res = await execPost()
 
             expect(res.status).toBe(404)
         })
         it('should return 400 if no movie left in stock', async () => {
-            _idMovie2 = _idMovie3
+            movie2._id = _idMovie3
             res = await execPost()
 
             expect(res.status).toBe(400)
@@ -146,12 +163,12 @@ describe('api/rents', () => {
             await execPost()
 
             db = await Rents.lookup(_idCus1, _idMovie2)
-            movie2.numberInStock-=1
+
             expect(db.customer).toMatchObject(cus1)
             expect(movie2).toMatchObject(db.title)
         })
     })
-    describe('DELETE /:name/:title', () => {
+    describe('DELETE /:id', () => {
         it('should return 401 if not logged in', async () => {
             token = ""
             res = await execDel()
@@ -159,14 +176,14 @@ describe('api/rents', () => {
             expect(res.status).toBe(401)
         })
         it('should return 400 if provided params are no valid ObjId', async () => {
-            _idCus1 = "dasf"
+            _idRent1 = "dasf"
             res = await execDel()
 
             expect(res.status).toBe(400)
         })
 
         it('should return 404 if no rent found', async () => {
-            _idCus1 = Mongoose.Types.ObjectId()
+            _idRent1 = Mongoose.Types.ObjectId()
             res = await execDel()
 
             expect(res.status).toBe(404)
@@ -191,7 +208,7 @@ describe('api/rents', () => {
             expect(db).toBe(null)
         })
     })
-    describe('PUT /:name/:title', () => {
+    describe('PUT /:id', () => {
         it('should return 401 if not logged in', async () => {
             token = ""
             res = await execPut()
@@ -199,31 +216,41 @@ describe('api/rents', () => {
             expect(res.status).toBe(401)
         })
         it('should return 400 if provided params are no valid ObjId', async () => {
-            _idCus1 = "dasf"
+            _idRent1 = "dasf"
             res = await execPut()
 
             expect(res.status).toBe(400)
         })
         it('should return 404 if rent is not found', async () => {
-            _idCus1 = Mongoose.Types.ObjectId()
+            _idRent1 = Mongoose.Types.ObjectId()
             res = await execPut()
 
             expect(res.status).toBe(404)
         })
         it('should return 400 if new customer is no valid objId', async () => {
-            _idCus2 = "asd"
+            cus2._id = "asd"
             res = await execPut()
 
             expect(res.status).toBe(400)
         })
         it('should return 400 if new movie is no valid objId', async () => {
-            _idMovie2 = "asd"
+            movie2._id = "asd"
             res = await execPut()
 
             expect(res.status).toBe(400)
         })
         it('should return 400 if new rent is not in stock', async () => {
-            _idMovie2 = _idMovie3
+            movie2._id = _idMovie3
+            res = await execPut()
+
+            db = await Movie.querry(_idMovie1, { numberInStock: 1 })
+            expect(res.status).toBe(400)
+            expect(db.numberInStock).toBe(1)
+        })
+        it('should return 400 if rental is already returned', async () => {
+            setDateReturned = await Rents.findById(_idRent1)
+            setDateReturned.dateReturned = new Date
+            await Rents.findByIdAndUpdate(_idRent1, setDateReturned)
             res = await execPut()
 
             db = await Movie.querry(_idMovie1, { numberInStock: 1 })

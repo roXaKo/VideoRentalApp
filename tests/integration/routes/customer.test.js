@@ -20,8 +20,8 @@ describe('/api/user', () => {
         _id1 = Mongoose.Types.ObjectId()
         _id2 = Mongoose.Types.ObjectId()
 
-        cus1 = { _id: _id1, name: "Customer Cus", phone: "123123123" }
-        cus2 = { _id: _id2, name: "Customer Cust", phone: "123123124", isGold: true }
+        cus1 = { _id: _id1, name: "Customer Cus", phone: "0123123123" }
+        cus2 = { _id: _id2, name: "Customer Cust", phone: "0123123124", isGold: true }
         cus3 = { name: "Customer Custer", phone: "0123123122", isGold: true }
         await Customers.insertMany([cus1, cus2])
     })
@@ -48,7 +48,7 @@ describe('/api/user', () => {
             .set('x-auth-token', token)
             .send(cus3)
     }
-    
+
     it('should return all users', async () => {
         res = await request(server).get('/api/customer')
         expect(res.body.length).toBe(2)
@@ -57,7 +57,7 @@ describe('/api/user', () => {
     describe('GET /:id', () => {
         it('it should return 404 if user not found', async () => {
             _id1 = Mongoose.Types.ObjectId
-            res = await request(server).get(`/api/customer/${_id1}`)
+            res = await request(server).get(`/api/customer/${Mongoose.Types.ObjectId()}`)
 
             expect(res.status).toBe(404)
         })
@@ -109,7 +109,7 @@ describe('/api/user', () => {
 
         })
         it('should return 400 if phone is already in db', async () => {
-            cus3.phone = "0" + cus1.phone
+            cus3.phone =  cus1.phone
 
             const res = await senderNew()
 
@@ -188,19 +188,17 @@ describe('/api/user', () => {
 
         })
         it('should throw if name is already in db', async () => {
-            cus3.name = cus1.name
+            cus3.name = cus2.name
             const res = await senderPut()
-
+            console.log(res.body)
             expect(res.status).toBe(400)
-
         })
         it('should throw if phone is already in db', async () => {
-            cus3.phone = "0" + cus1.phone
+            cus3.phone =  cus2.phone
 
             const res = await senderPut()
 
             expect(res.status).toBe(400)
-
         })
         it('should update the constomer name in db', async () => {
             const res = await senderPut()
@@ -218,7 +216,7 @@ describe('/api/user', () => {
             const res = await senderPut()
 
             db = await Customers.findOne({ _id: _id1 }).select({ phone: 1 })
-            expect(cus3.phone).toMatch("0" + db.phone.toString())
+            expect(cus3.phone).toMatch( db.phone)
         })
         it('should return the updated constomer', async () => {
             const res = await senderPut()
