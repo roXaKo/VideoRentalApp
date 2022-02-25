@@ -1,8 +1,8 @@
 const cors = require("cors");
-const {origin} = require("../config/default.json")
+const config = require('config')
 
 const corsOptions = {
-  origin: origin,
+  origin: config.get("origin"),
   optionSuccessStatus: 204,
   preflightContinue: true,
   methods: ["GET", "PUT", "POST", "DELETE"],

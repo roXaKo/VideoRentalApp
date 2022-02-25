@@ -1,4 +1,5 @@
 {
     "jwtPrivateKey":"jwtPrivateKey",
-    "origin":"origin"
+    "origin":"origin",
+    "db":"db"
 }
